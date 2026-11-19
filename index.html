@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HN Reader — Editorial Hacker News</title>
+    <!-- Google Fonts for Editorial Serif, Clean Sans, and Crisp Monospace -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS Variables for Seamless Theme & Typography Control */
+        :root {
+            --bg-primary: #FAF8F5;
+            --bg-secondary: #F2EFE9;
+            --bg-hover: #EAE5DC;
+            --text-primary: #1F1E1C;
+            --text-secondary: #5C5852;
+            --text-muted: #8A847C;
+            --border-color: #E2DDD5;
+            --accent-color: #D9531E;
+            --accent-soft: rgba(217, 83, 30, 0.12);
+            --code-bg: #EFECE6;
+            --shadow-color: rgba(31, 30, 28, 0.06);
+
+            /* Reader Typography Defaults */
+            --reader-font: 'Newsreader', Georgia, serif;
+            --ui-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono-font: 'JetBrains Mono', monospace;
+            --reader-size: 1.125rem;
+            --reader-line-height: 1.72;
+            --reader-max-width: 68ch;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-hover: #F1F5F9;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --accent-color: #EA580C;
+            --accent-soft: rgba(234, 88, 12, 0.1);
+            --code-bg: #F1F5F9;
+            --shadow-color: rgba(15, 23, 42, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #16181D;
+            --bg-secondary: #1E2028;
+            --bg-hover: #262934;
+            --text-primary: #E6E8EE;
+            --text-secondary: #9CA3AF;
+            --text-muted: #6B7280;
+            --border-color: #2A2E39;
+            --accent-color: #F97316;
+            --accent-soft: rgba(249, 115, 22, 0.15);
+            --code-bg: #22252E;
+            --shadow-color: rgba(0, 0, 0, 0.25);
+        }
+
+        [data-theme="oled"] {
+            --bg-primary: #000000;
+            --bg-secondary: #0D0D0D;
+            --bg-hover: #171717;
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+            --text-muted: #52525B;
+            --border-color: #222222;
+            --accent-color: #FB923C;
+            --accent-soft: rgba(251, 146, 60, 0.15);
+            --code-bg: #141414;
+            --shadow-color: rgba(255, 255, 255, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--ui-font);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Dynamic Reader Typography Classes */
+        .reader-prose {
+            font-family: var(--reader-font);
+            font-size: var(--reader-size);
+            line-height: var(--reader-line-height);
+            max-width: var(--reader-max-width);
+            color: var(--text-primary);
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        .reader-prose p {
+            margin-bottom: 1.25em;
+        }
+
+        .reader-prose a {
+            color: var(--accent-color);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+        }
+
+        .reader-prose a:hover {
+            opacity: 0.85;
+        }
+
+        .reader-prose pre {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            overflow-x: auto;
+            font-family: var(--mono-font);
+            font-size: 0.85em;
+            line-height: 1.5;
+            margin: 1rem 0;
+        }
+
+        .reader-prose code {
+            font-family: var(--mono-font);
+            background-color: var(--code-bg);
+            padding: 0.15em 0.35em;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+
+        .reader-prose pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .reader-prose blockquote, .hn-quote {
+            border-left: 3px solid var(--accent-color);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .reader-prose img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1.25rem 0;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Story Row Active/Selected Highlight */
+        .story-item {
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.15s ease;
+        }
+        .story-item:hover {
+            background-color: var(--bg-hover);
+        }
+        .story-item.selected {
+            background-color: var(--bg-secondary);
+            box-shadow: inset 3px 0 0 var(--accent-color);
+        }
+
+        /* Thread Guide Lines */
+        .comment-thread-line {
+            border-left: 2px solid var(--border-color);
+            transition: border-color 0.15s ease;
+        }
+        .comment-thread-line:hover {
+            border-left-color: var(--accent-color);
+        }
+
+        /* Subtle Skeleton Pulse */
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.25; }
+        }
+        .skeleton {
+            background-color: var(--border-color);
+            animation: pulse-subtle 1.6s infinite ease-in-out;
+            border-radius: 6px;
+        }
+
+        /* Popover Animation */
+        .popover-enter {
+            animation: popIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+    </style>
+</head>
+<body data-theme="paper">
+
+    <!-- Top Navigation Bar -->
+    <header style="background-color: var(--bg-primary); border-bottom: 1px solid var(--border-color);" class="sticky top-0 z-30 backdrop-blur-md bg-opacity-95">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+            
+            <!-- Left: Brand & Back Button -->
+            <div class="flex items-center gap-3">
+                <button id="back-btn" onclick="closeReader()" class="hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);" title="Back to Feed (Esc)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    <span class="hidden sm:inline">Feed</span>
+                </button>
+
+                <a href="#" onclick="resetToFeed(event)" class="flex items-center gap-2.5 group focus:outline-none">
+                    <div class="w-7 h-7 rounded-md flex items-center justify-center font-bold text-white text-sm shadow-sm transition-transform group-hover:scale-105" style="background-color: var(--accent-color);">
+                        Y
+                    </div>
+                    <span class="font-semibold tracking-tight text-base" style="color: var(--text-primary);">HN Reader</span>
+                </a>
+            </div>
+
+            <!-- Center: Feed Navigation Tabs (Hidden when in Reader View on small screens, or accessible) -->
+            <nav id="feed-tabs" class="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
+                <button data-feed="topstories" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors">Top</button>
+                <button data-feed="newstories" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors">New</button>
+                <button data-feed="beststories" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors">Best</button>
+                <button data-feed="askstories" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors">Ask</button>
+                <button data-feed="showstories" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors">Show</button>
+                <button data-feed="bookmarks" class="feed-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1">
+                    <span>Saved</span>
+                    <span id="bookmark-count" class="text-xs px-1.5 py-0.2 rounded-full" style="background-color: var(--bg-secondary); color: var(--text-secondary);">0</span>
+                </button>
+            </nav>
+
+            <!-- Right: Appearance Settings & Keyboard Shortcuts -->
+            <div class="flex items-center gap-2 relative">
+                <button id="shortcuts-btn" onclick="toggleShortcutsModal()" class="p-2 rounded-lg transition-colors hidden md:flex items-center justify-center" style="color: var(--text-secondary);" title="Keyboard Shortcuts (?)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+                </button>
+
+                <button id="appearance-btn" onclick="toggleAppearancePopover()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);" title="Typography & Theme Settings">
+                    <span class="font-serif text-base leading-none">Aa</span>
+                    <span class="hidden sm:inline text-xs" style="color: var(--text-secondary);">Appearance</span>
+                </button>
+
+                <!-- Appearance Popover Menu -->
+                <div id="appearance-popover" class="hidden popover-enter absolute right-0 top-12 w-80 rounded-xl p-4 shadow-xl z-50" style="background-color: var(--bg-primary); border: 1px solid var(--border-color); box-shadow: 0 12px 32px var(--shadow-color);">
+                    <div class="flex items-center justify-between mb-3 pb-2" style="border-bottom: 1px solid var(--border-color);">
+                        <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-secondary);">Reading Appearance</span>
+                        <button onclick="resetAppearance()" class="text-xs hover:underline" style="color: var(--accent-color);">Reset</button>
+                    </div>
+
+                    <!-- Theme Switcher -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);">Color Theme</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="setTheme('paper')" data-theme-btn="paper" class="theme-choice flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-all" style="background-color: #FAF8F5; color: #1F1E1C; border-color: #E2DDD5;">
+                                <span class="w-4 h-4 rounded-full border border-black/10" style="background-color: #FAF8F5;"></span>
+                                Paper
+                            </button>
+                            <button onclick="setTheme('light')" data-theme-btn="light" class="theme-choice flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-all" style="background-color: #FFFFFF; color: #0F172A; border-color: #E2E8F0;">
+                                <span class="w-4 h-4 rounded-full border border-black/10" style="background-color: #FFFFFF;"></span>
+                                Light
+                            </button>
+                            <button onclick="setTheme('dark')" data-theme-btn="dark" class="theme-choice flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-all" style="background-color: #16181D; color: #E6E8EE; border-color: #2A2E39;">
+                                <span class="w-4 h-4 rounded-full border border-white/20" style="background-color: #16181D;"></span>
+                                Dark
+                            </button>
+                            <button onclick="setTheme('oled')" data-theme-btn="oled" class="theme-choice flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-all" style="background-color: #000000; color: #F3F4F6; border-color: #222222;">
+                                <span class="w-4 h-4 rounded-full border border-white/20" style="background-color: #000000;"></span>
+                                OLED
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Typeface Switcher -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);">Typeface</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setFontFamily('serif')" data-font-btn="serif" class="font-choice py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors" style="font-family: 'Newsreader', Georgia, serif;">Serif</button>
+                            <button onclick="setFontFamily('sans')" data-font-btn="sans" class="font-choice py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors" style="font-family: 'Inter', sans-serif;">Sans</button>
+                            <button onclick="setFontFamily('mono')" data-font-btn="mono" class="font-choice py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors" style="font-family: 'JetBrains Mono', monospace;">Mono</button>
+                        </div>
+                    </div>
+
+                    <!-- Font Size -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-xs font-medium" style="color: var(--text-secondary);">Font Size</label>
+                            <span id="font-size-label" class="text-xs font-mono" style="color: var(--text-muted);">Medium</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <button onclick="setFontSize('sm')" data-size-btn="sm" class="size-choice py-1 rounded-md text-xs border">S</button>
+                            <button onclick="setFontSize('md')" data-size-btn="md" class="size-choice py-1 rounded-md text-xs border">M</button>
+                            <button onclick="setFontSize('lg')" data-size-btn="lg" class="size-choice py-1 rounded-md text-xs border">L</button>
+                            <button onclick="setFontSize('xl')" data-size-btn="xl" class="size-choice py-1 rounded-md text-xs border">XL</button>
+                        </div>
+                    </div>
+
+                    <!-- Line Height -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-xs font-medium" style="color: var(--text-secondary);">Line Spacing</label>
+                            <span id="line-height-label" class="text-xs font-mono" style="color: var(--text-muted);">Relaxed</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="setLineHeight('compact')" data-lh-btn="compact" class="lh-choice py-1 rounded-md text-xs border">Compact</button>
+                            <button onclick="setLineHeight('relaxed')" data-lh-btn="relaxed" class="lh-choice py-1 rounded-md text-xs border">Relaxed</button>
+                            <button onclick="setLineHeight('airy')" data-lh-btn="airy" class="lh-choice py-1 rounded-md text-xs border">Airy</button>
+                        </div>
+                    </div>
+
+                    <!-- Column Width -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-xs font-medium" style="color: var(--text-secondary);">Column Width</label>
+                            <span id="width-label" class="text-xs font-mono" style="color: var(--text-muted);">Editorial</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="setColumnWidth('narrow')" data-width-btn="narrow" class="width-choice py-1 rounded-md text-xs border">Narrow</button>
+                            <button onclick="setColumnWidth('editorial')" data-width-btn="editorial" class="width-choice py-1 rounded-md text-xs border">Editorial</button>
+                            <button onclick="setColumnWidth('wide')" data-width-btn="wide" class="width-choice py-1 rounded-md text-xs border">Wide</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
+
+        <!-- VIEW 1: FEED LIST VIEW -->
+        <section id="feed-view" class="pt-4">
+            <!-- Search & Filter Toolbar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-2" style="border-bottom: 1px solid var(--border-color);">
+                <div class="relative flex-1 max-w-md">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--text-muted);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input id="search-input" type="text" placeholder="Filter stories by title, domain, or author... (/)" oninput="handleSearch(this.value)" class="w-full pl-9 pr-8 py-1.5 rounded-lg text-sm focus:outline-none transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                    <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-xs px-1.5 py-0.5 rounded" style="color: var(--text-muted);">✕</button>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-end gap-3 text-xs" style="color: var(--text-muted);">
+                    <span id="feed-status">Loading stories...</span>
+                    <button onclick="refreshCurrentFeed()" class="p-1.5 rounded-lg hover:opacity-80 transition-opacity flex items-center gap-1" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);" title="Refresh Feed">
+                        <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stories Container -->
+            <div id="stories-list" class="divide-y" style="border-color: var(--border-color);">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Load More Button -->
+            <div id="load-more-container" class="hidden pt-6 pb-4 flex justify-center">
+                <button id="load-more-btn" onclick="loadMoreStories()" class="px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm hover:opacity-90" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                    Load More Stories
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 2: DISTRACTION-FREE READER VIEW -->
+        <section id="reader-view" class="hidden pt-6 sm:pt-10">
+            <div class="mx-auto transition-all duration-200" style="max-width: var(--reader-max-width);">
+                
+                <!-- Story Header Metadata -->
+                <article id="reader-article-header" class="mb-8 pb-6" style="border-bottom: 1px solid var(--border-color);">
+                    <div class="flex items-center flex-wrap gap-2 mb-3 text-xs font-medium" style="color: var(--text-secondary);">
+                        <span id="reader-domain-badge" class="px-2 py-0.5 rounded-md font-mono" style="background-color: var(--accent-soft); color: var(--accent-color);">news.ycombinator.com</span>
+                        <span>•</span>
+                        <span id="reader-points">0 points</span>
+                        <span>•</span>
+                        <span>by <strong id="reader-author" style="color: var(--text-primary);">author</strong></span>
+                        <span>•</span>
+                        <span id="reader-time">just now</span>
+                    </div>
+
+                    <h1 id="reader-title" class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight leading-snug mb-5" style="font-family: var(--reader-font); color: var(--text-primary);">
+                        Story Title
+                    </h1>
+
+                    <!-- Action Bar -->
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <a id="reader-external-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90" style="background-color: var(--accent-color);">
+                            <span>Open Original Source</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+
+                        <button id="reader-extract-btn" onclick="fetchReadableArticle()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                            <svg class="w-4 h-4" style="color: var(--accent-color);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                            <span id="extract-btn-label">Load Reader Mode Preview</span>
+                        </button>
+
+                        <button id="reader-bookmark-btn" onclick="toggleCurrentStoryBookmark()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);" title="Save Story">
+                            <svg id="reader-bookmark-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                            <span id="reader-bookmark-label">Save</span>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Story Text Body (For Ask HN, Show HN, or Extracted Article Content) -->
+                <div id="reader-body-container" class="hidden mb-10 pb-8" style="border-bottom: 1px solid var(--border-color);">
+                    <div id="reader-body-notice" class="hidden mb-4 px-3.5 py-2.5 rounded-lg text-xs flex items-center justify-between" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);">
+                        <span id="reader-body-notice-text">Article Reader View</span>
+                        <button onclick="hideArticlePreview()" class="hover:underline font-medium" style="color: var(--accent-color);">Hide Preview</button>
+                    </div>
+                    <div id="reader-prose-content" class="reader-prose"></div>
+                </div>
+
+                <!-- Discussion / Comments Section -->
+                <div id="comments-section">
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="flex items-center gap-2.5">
+                            <h2 class="text-base sm:text-lg font-semibold tracking-tight" style="color: var(--text-primary);">
+                                Discussion <span id="reader-comment-count" class="text-sm font-normal ml-1" style="color: var(--text-muted);">(0)</span>
+                            </h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleAllComments()" id="toggle-comments-btn" class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);" title="Toggle Comments (c)">
+                                Collapse All
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="comments-container" class="space-y-4">
+                        <!-- Nested Comments Tree Rendered Here -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Subtle Bottom Keyboard Hint Bar (Desktop) -->
+    <footer class="fixed bottom-0 left-0 right-0 py-2 px-4 hidden md:flex justify-center pointer-events-none z-20">
+        <div class="pointer-events-auto px-3.5 py-1.5 rounded-full text-xs flex items-center gap-4 shadow-sm backdrop-blur-md" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);">
+            <span><kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">j</kbd>/<kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">k</kbd> Navigate</span>
+            <span><kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">o</kbd> / <kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">Enter</kbd> Read</span>
+            <span><kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">c</kbd> Toggle Comments</span>
+            <span><kbd class="px-1.5 py-0.5 rounded font-mono text-[11px]" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">Esc</kbd> Back</span>
+            <button onclick="toggleShortcutsModal()" class="hover:underline font-medium" style="color: var(--accent-color);">All Shortcuts (?)</button>
+        </div>
+    </footer>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" onclick="if(event.target === this) toggleShortcutsModal()">
+        <div class="w-full max-w-md rounded-2xl p-6 shadow-2xl popover-enter" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+            <div class="flex items-center justify-between mb-4 pb-3" style="border-bottom: 1px solid var(--border-color);">
+                <h3 class="font-semibold text-base" style="color: var(--text-primary);">Keyboard Shortcuts</h3>
+                <button onclick="toggleShortcutsModal()" class="p-1 rounded-lg" style="color: var(--text-muted);">✕</button>
+            </div>
+            <div class="space-y-2.5 text-sm">
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Next / Previous story</span>
+                    <div class="flex gap-1"><kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">j</kbd> <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">k</kbd></div>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Open selected story</span>
+                    <div class="flex gap-1"><kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">o</kbd> or <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">Enter</kbd></div>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Return to story feed</span>
+                    <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">Esc</kbd>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Collapse / Expand comments</span>
+                    <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">c</kbd>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Bookmark current/selected story</span>
+                    <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">s</kbd>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span style="color: var(--text-secondary);">Focus search filter</span>
+                    <kbd class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">/</kbd>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Non-intrusive Toast Notification -->
+    <div id="toast" class="fixed bottom-12 right-5 z-50 px-4 py-2.5 rounded-xl text-xs font-medium shadow-lg transition-all duration-200 opacity-0 translate-y-2 pointer-events-none" style="background-color: var(--text-primary); color: var(--bg-primary);">
+        Notification
+    </div>
+
+    <script>
+        /**
+         * HN Reader — High-Readability Hacker News Web Application
+         * Uses official Hacker News Firebase API (https://hacker-news.firebaseio.com/v0/)
+         */
+
+        const API_BASE = 'https://hacker-news.firebaseio.com/v0';
+        const PAGE_SIZE = 25;
+
+        // Application State
+        const state = {
+            currentFeed: 'topstories',
+            storyIds: [],
+            loadedStories: [],
+            filteredStories: [],
+            displayedCount: 0,
+            selectedIndex: 0,
+            searchQuery: '',
+            activeStory: null,
+            viewMode: 'feed', // 'feed' | 'reader'
+            commentsCollapsed: false,
+            bookmarks: JSON.parse(localStorage.getItem('hn_reader_bookmarks') || '[]'),
+            itemCache: new Map(),
+            preferences: JSON.parse(localStorage.getItem('hn_reader_prefs') || JSON.stringify({
+                theme: 'paper',
+                fontFamily: 'serif',
+                fontSize: 'md',
+                lineHeight: 'relaxed',
+                columnWidth: 'editorial'
+            }))
+        };
+
+        // Initialization on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyPreferences();
+            updateBookmarkCount();
+            switchFeed('topstories');
+            setupKeyboardShortcuts();
+            setupOutsideClickHandlers();
+        });
+
+        /* =========================================================
+           1. TYPOGRAPHY & THEME CUSTOMIZATION ENGINE
+           ========================================================= */
+
+        function applyPreferences() {
+            const p = state.preferences;
+            const root = document.documentElement;
+
+            // 1. Theme
+            document.body.setAttribute('data-theme', p.theme);
+
+            // 2. Font Family
+            const fontMap = {
+                serif: "'Newsreader', Georgia, serif",
+                sans: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                mono: "'JetBrains Mono', monospace"
+            };
+            root.style.setProperty('--reader-font', fontMap[p.fontFamily] || fontMap.serif);
+
+            // 3. Font Size
+            const sizeMap = {
+                sm: { val: '1rem', label: 'Small' },
+                md: { val: '1.125rem', label: 'Medium' },
+                lg: { val: '1.25rem', label: 'Large' },
+                xl: { val: '1.4rem', label: 'Extra Large' }
+            };
+            const sizeObj = sizeMap[p.fontSize] || sizeMap.md;
+            root.style.setProperty('--reader-size', sizeObj.val);
+            document.getElementById('font-size-label').textContent = sizeObj.label;
+
+            // 4. Line Height
+            const lhMap = {
+                compact: { val: '1.5', label: 'Compact' },
+                relaxed: { val: '1.72', label: 'Relaxed' },
+                airy: { val: '1.95', label: 'Airy' }
+            };
+            const lhObj = lhMap[p.lineHeight] || lhMap.relaxed;
+            root.style.setProperty('--reader-line-height', lhObj.val);
+            document.getElementById('line-height-label').textContent = lhObj.label;
+
+            // 5. Column Width
+            const widthMap = {
+                narrow: { val: '56ch', label: 'Narrow' },
+                editorial: { val: '68ch', label: 'Editorial' },
+                wide: { val: '84ch', label: 'Wide' }
+            };
+            const widthObj = widthMap[p.columnWidth] || widthMap.editorial;
+            root.style.setProperty('--reader-max-width', widthObj.val);
+            document.getElementById('width-label').textContent = widthObj.label;
+
+            // Update Active States in Appearance Popover
+            document.querySelectorAll('.theme-choice').forEach(btn => {
+                const active = btn.dataset.themeBtn === p.theme;
+                btn.style.outline = active ? '2px solid var(--accent-color)' : 'none';
+                btn.style.outlineOffset = '2px';
+            });
+
+            const styleToggleButtons = (selector, attr, currentVal) => {
+                document.querySelectorAll(selector).forEach(btn => {
+                    const active = btn.dataset[attr] === currentVal;
+                    btn.style.backgroundColor = active ? 'var(--accent-soft)' : 'var(--bg-secondary)';
+                    btn.style.borderColor = active ? 'var(--accent-color)' : 'var(--border-color)';
+                    btn.style.color = active ? 'var(--accent-color)' : 'var(--text-primary)';
+                });
+            };
+
+            styleToggleButtons('.font-choice', 'fontBtn', p.fontFamily);
+            styleToggleButtons('.size-choice', 'sizeBtn', p.fontSize);
+            styleToggleButtons('.lh-choice', 'lhBtn', p.lineHeight);
+            styleToggleButtons('.width-choice', 'widthBtn', p.columnWidth);
+
+            localStorage.setItem('hn_reader_prefs', JSON.stringify(p));
+        }
+
+        function setTheme(theme) { state.preferences.theme = theme; applyPreferences(); }
+        function setFontFamily(font) { state.preferences.fontFamily = font; applyPreferences(); }
+        function setFontSize(size) { state.preferences.fontSize = size; applyPreferences(); }
+        function setLineHeight(lh) { state.preferences.lineHeight = lh; applyPreferences(); }
+        function setColumnWidth(width) { state.preferences.columnWidth = width; applyPreferences(); }
+
+        function resetAppearance() {
+            state.preferences = {
+                theme: 'paper',
+                fontFamily: 'serif',
+                fontSize: 'md',
+                lineHeight: 'relaxed',
+                columnWidth: 'editorial'
+            };
+            applyPreferences();
+            showToast('Appearance reset to editorial defaults');
+        }
+
+        function toggleAppearancePopover() {
+            const pop = document.getElementById('appearance-popover');
+            pop.classList.toggle('hidden');
+        }
+
+        function setupOutsideClickHandlers() {
+            document.addEventListener('click', (e) => {
+                const pop = document.getElementById('appearance-popover');
+                const btn = document.getElementById('appearance-btn');
+                if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !btn.contains(e.target)) {
+                    pop.classList.add('hidden');
+                }
+            });
+        }
+
+        /* =========================================================
+           2. HACKER NEWS API & FEED MANAGEMENT
+           ========================================================= */
+
+        async function fetchItem(id) {
+            if (state.itemCache.has(id)) {
+                return state.itemCache.get(id);
+            }
+            try {
+                const res = await fetch(`${API_BASE}/item/${id}.json`);
+                if (!res.ok) throw new Error('Network error');
+                const data = await res.json();
+                if (data) state.itemCache.set(id, data);
+                return data;
+            } catch (err) {
+                console.error(`Failed to fetch item ${id}:`, err);
+                return null;
+            }
+        }
+
+        async function switchFeed(feedName) {
+            state.currentFeed = feedName;
+            state.selectedIndex = 0;
+            state.searchQuery = '';
+            document.getElementById('search-input').value = '';
+            document.getElementById('clear-search').classList.add('hidden');
+
+            if (state.viewMode === 'reader') {
+                closeReader();
+            }
+
+            // Update Tab Styles
+            document.querySelectorAll('.feed-tab').forEach(tab => {
+                const isActive = tab.dataset.feed === feedName;
+                tab.style.backgroundColor = isActive ? 'var(--bg-secondary)' : 'transparent';
+                tab.style.color = isActive ? 'var(--accent-color)' : 'var(--text-secondary)';
+                tab.style.fontWeight = isActive ? '600' : '500';
+            });
+
+            // Handle Saved Bookmarks Feed
+            if (feedName === 'bookmarks') {
+                renderBookmarksFeed();
+                return;
+            }
+
+            renderSkeletonFeed();
+            document.getElementById('feed-status').textContent = 'Fetching stories...';
+            document.getElementById('load-more-container').classList.add('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/${feedName}.json`);
+                const ids = await res.json();
+                state.storyIds = ids || [];
+                state.loadedStories = [];
+                state.displayedCount = 0;
+
+                await loadMoreStories(true);
+            } catch (err) {
+                document.getElementById('stories-list').innerHTML = `
+                    <div class="py-16 text-center">
+                        <p class="text-sm font-medium mb-2" style="color: var(--text-primary);">Unable to connect to Hacker News API</p>
+                        <p class="text-xs mb-4" style="color: var(--text-muted);">Please check your network connection and try again.</p>
+                        <button onclick="refreshCurrentFeed()" class="px-4 py-2 rounded-lg text-xs font-medium text-white" style="background-color: var(--accent-color);">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Attach tab click listeners
+        document.querySelectorAll('.feed-tab').forEach(btn => {
+            btn.addEventListener('click', () => switchFeed(btn.dataset.feed));
+        });
+
+        async function loadMoreStories(isInitial = false) {
+            const btn = document.getElementById('load-more-btn');
+            if (!isInitial && btn) {
+                btn.textContent = 'Loading...';
+                btn.disabled = true;
+            }
+
+            const nextSlice = state.storyIds.slice(state.displayedCount, state.displayedCount + PAGE_SIZE);
+            const items = await Promise.all(nextSlice.map(id => fetchItem(id)));
+            const validItems = items.filter(item => item && !item.deleted && !item.dead);
+
+            state.loadedStories.push(...validItems);
+            state.displayedCount += nextSlice.length;
+
+            applySearchFilter();
+
+            if (btn) {
+                btn.textContent = 'Load More Stories';
+                btn.disabled = false;
+            }
+
+            const loadMoreContainer = document.getElementById('load-more-container');
+            if (state.displayedCount < state.storyIds.length && !state.searchQuery) {
+                loadMoreContainer.classList.remove('hidden');
+            } else {
+                loadMoreContainer.classList.add('hidden');
+            }
+        }
+
+        function refreshCurrentFeed() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('animate-spin');
+            // Clear cache for top IDs so fresh scores/comments load
+            state.storyIds.slice(0, state.displayedCount).forEach(id => state.itemCache.delete(id));
+            switchFeed(state.currentFeed).finally(() => {
+                setTimeout(() => icon.classList.remove('animate-spin'), 400);
+            });
+        }
+
+        function renderBookmarksFeed() {
+            document.getElementById('load-more-container').classList.add('hidden');
+            state.loadedStories = [...state.bookmarks].reverse();
+            applySearchFilter();
+        }
+
+        /* =========================================================
+           3. SEARCH & FEED RENDERING
+           ========================================================= */
+
+        function handleSearch(query) {
+            state.searchQuery = query.trim().toLowerCase();
+            state.selectedIndex = 0;
+            const clearBtn = document.getElementById('clear-search');
+            if (state.searchQuery) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            applySearchFilter();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleSearch('');
+        }
+
+        function applySearchFilter() {
+            if (!state.searchQuery) {
+                state.filteredStories = state.loadedStories;
+            } else {
+                state.filteredStories = state.loadedStories.filter(story => {
+                    const title = (story.title || '').toLowerCase();
+                    const author = (story.by || '').toLowerCase();
+                    const domain = extractDomain(story.url).toLowerCase();
+                    return title.includes(state.searchQuery) || author.includes(state.searchQuery) || domain.includes(state.searchQuery);
+                });
+            }
+
+            const statusEl = document.getElementById('feed-status');
+            if (state.currentFeed === 'bookmarks') {
+                statusEl.textContent = `${state.filteredStories.length} saved ${state.filteredStories.length === 1 ? 'story' : 'stories'}`;
+            } else {
+                statusEl.textContent = `Showing ${state.filteredStories.length} stories`;
+            }
+
+            renderStoriesList();
+        }
+
+        function renderSkeletonFeed() {
+            const container = document.getElementById('stories-list');
+            let html = '';
+            for (let i = 0; i < 10; i++) {
+                html += `
+                    <div class="py-4 px-3 flex items-start gap-3.5">
+                        <div class="skeleton w-6 h-5 mt-1 shrink-0"></div>
+                        <div class="flex-1 space-y-2.5">
+                            <div class="skeleton h-5 w-4/5"></div>
+                            <div class="skeleton h-3.5 w-2/5"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function renderStoriesList() {
+            const container = document.getElementById('stories-list');
+
+            if (state.filteredStories.length === 0) {
+                container.innerHTML = `
+                    <div class="py-16 text-center">
+                        <p class="text-sm font-medium mb-1" style="color: var(--text-primary);">
+                            ${state.currentFeed === 'bookmarks' ? 'No saved stories yet' : 'No matching stories found'}
+                        </p>
+                        <p class="text-xs" style="color: var(--text-muted);">
+                            ${state.currentFeed === 'bookmarks' ? 'Bookmark any story while browsing or reading to save it here.' : 'Try adjusting your search filter or loading more stories.'}
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.filteredStories.map((story, idx) => {
+                const domain = extractDomain(story.url);
+                const timeAgo = formatRelativeTime(story.time);
+                const isSelected = idx === state.selectedIndex;
+                const isSaved = isBookmarked(story.id);
+                const commentCount = story.descendants || 0;
+
+                return `
+                    <article onclick="openStory(${story.id}, ${idx})" data-story-index="${idx}" class="story-item ${isSelected ? 'selected' : ''} py-3.5 px-3 sm:px-4 rounded-lg cursor-pointer flex items-start justify-between gap-3 group">
+                        <div class="flex items-start gap-3 min-w-0 flex-1">
+                            <!-- Rank Number -->
+                            <span class="text-xs font-mono pt-1 w-6 text-right shrink-0 select-none" style="color: var(--text-muted);">
+                                ${idx + 1}.
+                            </span>
+
+                            <div class="min-w-0 flex-1">
+                                <!-- Title & Domain -->
+                                <div class="mb-1.5 leading-snug">
+                                    <h2 class="inline text-[15px] sm:text-base font-medium group-hover:underline decoration-1 underline-offset-2" style="color: var(--text-primary);">
+                                        ${escapeHtml(story.title)}
+                                    </h2>
+                                    ${domain ? `
+                                        <span class="inline-block ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-mono align-middle" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);">
+                                            ${escapeHtml(domain)}
+                                        </span>
+                                    ` : ''}
+                                </div>
+
+                                <!-- Metadata Row -->
+                                <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs" style="color: var(--text-secondary);">
+                                    <span class="font-medium" style="color: var(--accent-color);">${story.score || 0} pts</span>
+                                    <span>by ${escapeHtml(story.by || 'unknown')}</span>
+                                    <span>•</span>
+                                    <span>${timeAgo}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Actions: Bookmark & Comment Pill -->
+                        <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                            <button onclick="event.stopPropagation(); toggleBookmarkById(${story.id})" class="p-1.5 rounded-lg transition-colors hover:opacity-80" style="color: ${isSaved ? 'var(--accent-color)' : 'var(--text-muted)'};" title="${isSaved ? 'Remove Bookmark' : 'Save Story'}">
+                                <svg class="w-4 h-4" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                </svg>
+                            </button>
+
+                            <div class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                                <svg class="w-3.5 h-3.5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                <span>${commentCount}</span>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================
+           4. READER VIEW & ARTICLE PREVIEW PARSER
+           ========================================================= */
+
+        async function openStory(storyId, index = null) {
+            if (index !== null) state.selectedIndex = index;
+
+            const story = await fetchItem(storyId);
+            if (!story) {
+                showToast('Could not load story details');
+                return;
+            }
+
+            state.activeStory = story;
+            state.viewMode = 'reader';
+            state.commentsCollapsed = false;
+            document.getElementById('toggle-comments-btn').textContent = 'Collapse All';
+
+            // Switch UI Views
+            document.getElementById('feed-view').classList.add('hidden');
+            document.getElementById('reader-view').classList.remove('hidden');
+            document.getElementById('back-btn').classList.remove('hidden');
+            document.getElementById('back-btn').classList.add('flex');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+
+            // Populate Story Header
+            const domain = extractDomain(story.url) || 'news.ycombinator.com';
+            const externalUrl = story.url || `https://news.ycombinator.com/item?id=${story.id}`;
+
+            document.getElementById('reader-domain-badge').textContent = domain;
+            document.getElementById('reader-points').textContent = `${story.score || 0} points`;
+            document.getElementById('reader-author').textContent = story.by || 'unknown';
+            document.getElementById('reader-time').textContent = formatRelativeTime(story.time);
+            document.getElementById('reader-title').textContent = story.title;
+            document.getElementById('reader-external-link').href = externalUrl;
+            document.getElementById('reader-comment-count').textContent = `(${story.descendants || 0})`;
+
+            updateReaderBookmarkButton();
+
+            // Handle Native Story Text (Ask HN, Show HN, etc.) vs External URL
+            const bodyContainer = document.getElementById('reader-body-container');
+            const proseContent = document.getElementById('reader-prose-content');
+            const noticeBar = document.getElementById('reader-body-notice');
+            const extractBtn = document.getElementById('reader-extract-btn');
+
+            if (story.text) {
+                bodyContainer.classList.remove('hidden');
+                noticeBar.classList.add('hidden');
+                proseContent.innerHTML = sanitizeHNHtml(story.text);
+                extractBtn.classList.add('hidden');
+            } else if (story.url) {
+                bodyContainer.classList.add('hidden');
+                proseContent.innerHTML = '';
+                extractBtn.classList.remove('hidden');
+                document.getElementById('extract-btn-label').textContent = 'Load Reader Mode Preview';
+            } else {
+                bodyContainer.classList.add('hidden');
+                extractBtn.classList.add('hidden');
+            }
+
+            // Load Comments Tree
+            renderCommentsSection(story);
+        }
+
+        function closeReader() {
+            state.viewMode = 'feed';
+            state.activeStory = null;
+            document.getElementById('reader-view').classList.add('hidden');
+            document.getElementById('feed-view').classList.remove('hidden');
+            document.getElementById('back-btn').classList.add('hidden');
+            document.getElementById('back-btn').classList.remove('flex');
+
+            if (state.currentFeed === 'bookmarks') {
+                renderBookmarksFeed();
+            } else {
+                renderStoriesList();
+            }
+            scrollToSelectedStory();
+        }
+
+        function resetToFeed(e) {
+            if (e) e.preventDefault();
+            if (state.viewMode === 'reader') {
+                closeReader();
+            } else {
+                switchFeed('topstories');
+            }
+        }
+
+        /**
+         * Fetches external article HTML via a public CORS proxy and extracts
+         * clean paragraphs/headings for distraction-free reading.
+         */
+        async function fetchReadableArticle() {
+            const story = state.activeStory;
+            if (!story || !story.url) return;
+
+            const btnLabel = document.getElementById('extract-btn-label');
+            const bodyContainer = document.getElementById('reader-body-container');
+            const proseContent = document.getElementById('reader-prose-content');
+            const noticeBar = document.getElementById('reader-body-notice');
+            const noticeText = document.getElementById('reader-body-notice-text');
+
+            btnLabel.textContent = 'Extracting Article...';
+            bodyContainer.classList.remove('hidden');
+            noticeBar.classList.remove('hidden');
+            noticeText.textContent = `Fetching clean preview from ${extractDomain(story.url)}...`;
+            proseContent.innerHTML = `
+                <div class="space-y-3 py-2">
+                    <div class="skeleton h-4 w-full"></div>
+                    <div class="skeleton h-4 w-11/12"></div>
+                    <div class="skeleton h-4 w-4/5"></div>
+                    <div class="skeleton h-4 w-full"></div>
+                </div>
+            `;
+
+            try {
+                // Using AllOrigins CORS-friendly proxy to fetch raw HTML
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(story.url)}`;
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('Proxy request failed');
+                const data = await response.json();
+
+                if (!data.contents) throw new Error('Empty content');
+
+                // Parse HTML safely in memory using DOMParser
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+
+                // Strip noisy elements
+                doc.querySelectorAll('script, style, nav, header, footer, aside, iframe, noscript, form, button, .ad, .ads, .sidebar, .comments').forEach(el => el.remove());
+
+                // Find primary article container
+                const articleEl = doc.querySelector('article') || doc.querySelector('main') || doc.querySelector('[role="main"]') || doc.body;
+                const blocks = articleEl.querySelectorAll('h1, h2, h3, p, pre, blockquote, ul, ol');
+
+                let extractedHtml = '';
+                let charCount = 0;
+
+                blocks.forEach(node => {
+                    const text = node.textContent.trim();
+                    if (text.length < 25 && !['H1', 'H2', 'H3', 'PRE'].includes(node.tagName)) return;
+
+                    if (node.tagName === 'PRE') {
+                        extractedHtml += `<pre><code>${escapeHtml(node.textContent)}</code></pre>`;
+                    } else if (['H1', 'H2', 'H3'].includes(node.tagName)) {
+                        extractedHtml += `<h3 class="text-xl font-semibold mt-6 mb-2" style="color: var(--text-primary);">${escapeHtml(text)}</h3>`;
+                    } else if (node.tagName === 'BLOCKQUOTE') {
+                        extractedHtml += `<blockquote>${escapeHtml(text)}</blockquote>`;
+                    } else if (node.tagName === 'UL' || node.tagName === 'OL') {
+                        const items = Array.from(node.querySelectorAll('li')).slice(0, 12).map(li => `<li>${escapeHtml(li.textContent.trim())}</li>`).join('');
+                        if (items) extractedHtml += `<${node.tagName.toLowerCase()} class="list-disc pl-6 mb-4 space-y-1">${items}</${node.tagName.toLowerCase()}>`;
+                    } else {
+                        extractedHtml += `<p>${escapeHtml(text)}</p>`;
+                    }
+                    charCount += text.length;
+                });
+
+                if (charCount < 180) {
+                    throw new Error('Insufficient readable text extracted');
+                }
+
+                noticeText.textContent = `Reader Mode Preview • Extracted from ${extractDomain(story.url)}`;
+                proseContent.innerHTML = extractedHtml;
+                btnLabel.textContent = 'Refresh Reader Preview';
+
+            } catch (err) {
+                noticeText.textContent = 'Direct Reader Preview Unavailable';
+                proseContent.innerHTML = `
+                    <div class="p-4 rounded-xl text-sm" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); font-family: var(--ui-font);">
+                        <p class="mb-2" style="color: var(--text-primary);">This publisher restricts automated reader extraction or requires JavaScript rendering.</p>
+                        <a href="${story.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-medium underline" style="color: var(--accent-color);">
+                            Read full article directly on ${extractDomain(story.url)} ↗
+                        </a>
+                    </div>
+                `;
+                btnLabel.textContent = 'Retry Reader Preview';
+            }
+        }
+
+        function hideArticlePreview() {
+            document.getElementById('reader-body-container').classList.add('hidden');
+            document.getElementById('extract-btn-label').textContent = 'Load Reader Mode Preview';
+        }
+
+        /* =========================================================
+           5. THREADED COMMENTS ENGINE
+           ========================================================= */
+
+        async function renderCommentsSection(story) {
+            const container = document.getElementById('comments-container');
+
+            if (!story.kids || story.kids.length === 0) {
+                container.innerHTML = `
+                    <div class="py-10 text-center rounded-xl" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+                        <p class="text-sm" style="color: var(--text-secondary);">No comments yet. Be the first to join the discussion on Hacker News.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Show comment loading skeletons
+            container.innerHTML = `
+                <div class="space-y-4">
+                    ${[1, 2, 3].map(() => `
+                        <div class="p-4 rounded-xl space-y-2" style="background-color: var(--bg-secondary);">
+                            <div class="skeleton h-3.5 w-32"></div>
+                            <div class="skeleton h-4 w-full"></div>
+                            <div class="skeleton h-4 w-3/4"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Fetch top-level comments and their nested children recursively (up to depth 4 initially for speed)
+            const topComments = await fetchCommentTree(story.kids.slice(0, 35), 0, 4);
+            container.innerHTML = '';
+
+            if (topComments.length === 0) {
+                container.innerHTML = `<p class="text-sm py-6 text-center" style="color: var(--text-muted);">Comments are currently unavailable.</p>`;
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            topComments.forEach(comment => {
+                fragment.appendChild(createCommentElement(comment, story.by, 0));
+            });
+            container.appendChild(fragment);
+        }
+
+        async function fetchCommentTree(ids, depth, maxDepth) {
+            if (!ids || ids.length === 0 || depth > maxDepth) return [];
+            const items = await Promise.all(ids.map(id => fetchItem(id)));
+            const validComments = items.filter(c => c && !c.deleted && !c.dead && c.text);
+
+            // Recursively fetch replies
+            await Promise.all(validComments.map(async (comment) => {
+                if (comment.kids && comment.kids.length > 0 && depth < maxDepth) {
+                    comment.children = await fetchCommentTree(comment.kids, depth + 1, maxDepth);
+                } else {
+                    comment.children = [];
+                }
+            }));
+
+            return validComments;
+        }
+
+        function createCommentElement(comment, opAuthor, depth) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `comment-node ${depth > 0 ? 'ml-3 sm:ml-6 pl-3 sm:pl-4 comment-thread-line mt-3' : 'py-3 border-b'}`;
+            if (depth === 0) {
+                wrapper.style.borderColor = 'var(--border-color)';
+            }
+
+            const isOP = comment.by && opAuthor && comment.by === opAuthor;
+            const timeAgo = formatRelativeTime(comment.time);
+            const totalDescendants = countDescendants(comment);
+
+            wrapper.innerHTML = `
+                <div class="comment-header flex items-center justify-between gap-2 mb-1.5 select-none">
+                    <div class="flex items-center gap-2 text-xs">
+                        <button class="collapse-trigger flex items-center gap-1.5 font-medium hover:opacity-80 focus:outline-none" style="color: var(--text-primary);">
+                            <span class="collapse-icon font-mono text-[11px] px-1 rounded" style="background-color: var(--bg-secondary); color: var(--text-secondary);">[–]</span>
+                            <span>${escapeHtml(comment.by || 'anonymous')}</span>
+                        </button>
+                        ${isOP ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold tracking-wide uppercase" style="background-color: var(--accent-color); color: #fff;">OP</span>` : ''}
+                        <span style="color: var(--text-muted);">•</span>
+                        <span style="color: var(--text-muted);">${timeAgo}</span>
+                        <span class="collapsed-badge hidden text-xs italic" style="color: var(--accent-color);">(${totalDescendants + 1} hidden)</span>
+                    </div>
+                </div>
+                <div class="comment-body-wrapper">
+                    <div class="reader-prose text-[0.96em] leading-relaxed" style="max-width: 100%;">
+                        ${sanitizeHNHtml(comment.text)}
+                    </div>
+                    <div class="comment-children"></div>
+                </div>
+            `;
+
+            // Collapse/Expand Handler
+            const trigger = wrapper.querySelector('.collapse-trigger');
+            const bodyWrapper = wrapper.querySelector('.comment-body-wrapper');
+            const icon = wrapper.querySelector('.collapse-icon');
+            const badge = wrapper.querySelector('.collapsed-badge');
+
+            trigger.addEventListener('click', () => {
+                const isHidden = bodyWrapper.classList.toggle('hidden');
+                icon.textContent = isHidden ? '[+]' : '[–]';
+                badge.classList.toggle('hidden', !isHidden);
+            });
+
+            // Render Nested Children
+            const childrenContainer = wrapper.querySelector('.comment-children');
+            if (comment.children && comment.children.length > 0) {
+                comment.children.forEach(child => {
+                    childrenContainer.appendChild(createCommentElement(child, opAuthor, depth + 1));
+                });
+            }
+
+            return wrapper;
+        }
+
+        function countDescendants(comment) {
+            if (!comment.children || comment.children.length === 0) return 0;
+            return comment.children.reduce((acc, child) => acc + 1 + countDescendants(child), 0);
+        }
+
+        function toggleAllComments() {
+            state.commentsCollapsed = !state.commentsCollapsed;
+            const btn = document.getElementById('toggle-comments-btn');
+            btn.textContent = state.commentsCollapsed ? 'Expand All' : 'Collapse All';
+
+            document.querySelectorAll('#comments-container > .comment-node').forEach(node => {
+                const bodyWrapper = node.querySelector('.comment-body-wrapper');
+                const icon = node.querySelector('.collapse-icon');
+                const badge = node.querySelector('.collapsed-badge');
+                if (bodyWrapper) {
+                    bodyWrapper.classList.toggle('hidden', state.commentsCollapsed);
+                    icon.textContent = state.commentsCollapsed ? '[+]' : '[–]';
+                    badge.classList.toggle('hidden', !state.commentsCollapsed);
+                }
+            });
+        }
+
+        /* =========================================================
+           6. BOOKMARKS (LOCALSTORAGE PERSISTENCE)
+           ========================================================= */
+
+        function isBookmarked(id) {
+            return state.bookmarks.some(b => b.id === id);
+        }
+
+        function updateBookmarkCount() {
+            document.getElementById('bookmark-count').textContent = state.bookmarks.length;
+        }
+
+        async function toggleBookmarkById(id) {
+            const existingIdx = state.bookmarks.findIndex(b => b.id === id);
+            if (existingIdx > -1) {
+                state.bookmarks.splice(existingIdx, 1);
+                showToast('Removed from Saved stories');
+            } else {
+                const story = await fetchItem(id);
+                if (story) {
+                    state.bookmarks.push({
+                        id: story.id,
+                        title: story.title,
+                        url: story.url,
+                        by: story.by,
+                        score: story.score,
+                        time: story.time,
+                        descendants: story.descendants
+                    });
+                    showToast('Saved story for later reading');
+                }
+            }
+            localStorage.setItem('hn_reader_bookmarks', JSON.stringify(state.bookmarks));
+            updateBookmarkCount();
+
+            if (state.viewMode === 'feed') {
+                if (state.currentFeed === 'bookmarks') renderBookmarksFeed();
+                else renderStoriesList();
+            } else if (state.activeStory && state.activeStory.id === id) {
+                updateReaderBookmarkButton();
+            }
+        }
+
+        function toggleCurrentStoryBookmark() {
+            if (state.activeStory) {
+                toggleBookmarkById(state.activeStory.id);
+            }
+        }
+
+        function updateReaderBookmarkButton() {
+            if (!state.activeStory) return;
+            const saved = isBookmarked(state.activeStory.id);
+            const icon = document.getElementById('reader-bookmark-icon');
+            const label = document.getElementById('reader-bookmark-label');
+            const btn = document.getElementById('reader-bookmark-btn');
+
+            icon.setAttribute('fill', saved ? 'currentColor' : 'none');
+            btn.style.color = saved ? 'var(--accent-color)' : 'var(--text-primary)';
+            btn.style.borderColor = saved ? 'var(--accent-color)' : 'var(--border-color)';
+            label.textContent = saved ? 'Saved' : 'Save';
+        }
+
+        /* =========================================================
+           7. KEYBOARD SHORTCUTS
+           ========================================================= */
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ignore shortcuts when typing in search input
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                    if (e.key === 'Escape') {
+                        document.activeElement.blur();
+                    }
+                    return;
+                }
+
+                // Close modals with Escape
+                const shortcutsModal = document.getElementById('shortcuts-modal');
+                if (!shortcutsModal.classList.contains('hidden')) {
+                    if (e.key === 'Escape' || e.key === '?') toggleShortcutsModal();
+                    return;
+                }
+
+                if (e.key === '?') {
+                    e.preventDefault();
+                    toggleShortcutsModal();
+                    return;
+                }
+
+                if (e.key === '/') {
+                    e.preventDefault();
+                    if (state.viewMode === 'reader') closeReader();
+                    document.getElementById('search-input').focus();
+                    return;
+                }
+
+                if (state.viewMode === 'feed') {
+                    if (e.key === 'j' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (state.selectedIndex < state.filteredStories.length - 1) {
+                            state.selectedIndex++;
+                            renderStoriesList();
+                            scrollToSelectedStory();
+                        }
+                    } else if (e.key === 'k' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (state.selectedIndex > 0) {
+                            state.selectedIndex--;
+                            renderStoriesList();
+                            scrollToSelectedStory();
+                        }
+                    } else if (e.key === 'o' || e.key === 'Enter') {
+                        e.preventDefault();
+                        const story = state.filteredStories[state.selectedIndex];
+                        if (story) openStory(story.id, state.selectedIndex);
+                    } else if (e.key === 's') {
+                        e.preventDefault();
+                        const story = state.filteredStories[state.selectedIndex];
+                        if (story) toggleBookmarkById(story.id);
+                    }
+                } else if (state.viewMode === 'reader') {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeReader();
+                    } else if (e.key === 'c') {
+                        e.preventDefault();
+                        toggleAllComments();
+                    } else if (e.key === 's') {
+                        e.preventDefault();
+                        toggleCurrentStoryBookmark();
+                    }
+                }
+            });
+        }
+
+        function scrollToSelectedStory() {
+            const el = document.querySelector(`[data-story-index="${state.selectedIndex}"]`);
+            if (el) {
+                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        function toggleShortcutsModal() {
+            document.getElementById('shortcuts-modal').classList.toggle('hidden');
+        }
+
+        /* =========================================================
+           8. UTILITIES & SANITIZATION
+           ========================================================= */
+
+        function extractDomain(url) {
+            if (!url) return '';
+            try {
+                const hostname = new URL(url).hostname;
+                return hostname.replace(/^www\./, '');
+            } catch {
+                return '';
+            }
+        }
+
+        function formatRelativeTime(unixSeconds) {
+            if (!unixSeconds) return '';
+            const diff = Math.floor(Date.now() / 1000) - unixSeconds;
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            const days = Math.floor(diff / 86400);
+            if (days < 30) return `${days}d ago`;
+            return `${Math.floor(days / 30)}mo ago`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        /**
+         * Safely formats Hacker News HTML comment/post bodies.
+         * HN API returns HTML entities and <p>, <i>, <a>, <pre>, <code> tags.
+         */
+        function sanitizeHNHtml(html) {
+            if (!html) return '';
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            // Remove any unexpected script/style tags
+            temp.querySelectorAll('script, style, iframe, object').forEach(el => el.remove());
+
+            // Ensure all links open safely in new tabs
+            temp.querySelectorAll('a').forEach(a => {
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+            });
+
+            // Style HN quote lines starting with '>'
+            temp.querySelectorAll('p').forEach(p => {
+                if (p.textContent.trim().startsWith('>')) {
+                    p.classList.add('hn-quote');
+                }
+            });
+
+            return temp.innerHTML;
+        }
+
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-2');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+            }, 2400);
+        }
+    </script>
+</body>
+</html>
